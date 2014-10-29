@@ -1,9 +1,10 @@
 /**************************************************************************
-* AngularJS-nvD3, v0.1.0; MIT License; 10/06/2014 17:12
+* AngularJS-nvD3, v0.1.0; MIT License; 10/29/2014 16:28
 * http://krispo.github.io/angular-nvd3
 **************************************************************************/
-(function(){
 
+(function(){
+	/*global window, $*/
     'use strict';
 
     angular.module('nvd3', [])
@@ -20,7 +21,9 @@
                 },
                 link: function(scope, element, attrs){
                     var defaultConfig = { extended: false, visible: true, disabled: false, autorefresh: true, refreshDataOnly: false };
-
+                    var onWindowResize = function(){
+                        scope.chart.update();
+                    };
                     //basic directive configuration
                     scope._config = angular.extend(defaultConfig, scope.config);
 
@@ -30,16 +33,14 @@
                         refresh: function(){
                             scope.api.updateWithOptions(scope.options);
                         },
-
-                        // Update chart layout (for example if container is resized)
-                        update: function() {
-                            scope.chart.update();
-                        },
-
                         // Update chart with new options
                         updateWithOptions: function(options){
-                            // Clearing
-                            scope.api.clearElement();
+
+                            if (!d3.select(element[0]).select('svg')[0] || !d3.select(element[0]).select('svg')[0][0])
+                            {
+                                // Clearing
+                                scope.api.clearElement();
+                            }
 
                             // Exit if options are not yet bound
                             if (angular.isDefined(options) === false) return;
@@ -110,7 +111,7 @@
                                         || (key === 'xScale' && options.chart.type === 'scatterChart')
                                         || (key === 'yScale' && options.chart.type === 'scatterChart')
                                         || (key === 'x' && (options.chart.type === 'lineWithFocusChart' || options.chart.type === 'multiChart'))
-                                        || (key === 'y' && (options.chart.type === 'lineWithFocusChart' || options.chart.type === 'multiChart'))
+                                        || (key === 'y' && options.chart.type === 'lineWithFocusChart' || options.chart.type === 'multiChart')
                                     );
 
                                 else if (options.chart[key] === undefined || options.chart[key] === null){
@@ -134,14 +135,26 @@
 
                             nv.addGraph(function() {
                                 // Update the chart when window resizes
-                                nv.utils.windowResize(function() { scope.chart.update(); });
+                                $(window).on('resize', onWindowResize);
                                 return scope.chart;
                             }, options.chart['callback']);
                         },
 
                         // Update chart with new data
                         updateWithData: function (data){
-                            if (data) {
+                            if (data
+                                && d3.select(element[0]).select('svg')[0]
+                                && d3.select(element[0]).select('svg')[0][0]) {
+
+//                                debugger;
+                                d3.select(element[0])
+                                    .select('svg')
+                                    .datum(data)
+                                    .transition().duration(scope.options.chart['transitionDuration'])
+                                    .call(scope.chart);
+                                d3.select(element[0]).select('svg')[0][0].style.height = scope.options.chart.height + 'px';
+                                d3.select(element[0]).select('svg')[0][0].style.width = scope.options.chart.width + 'px';
+                            } else if (data) {
                                 scope.options.chart['transitionDuration'] = +scope.options.chart['transitionDuration'] || 250;
                                 // remove whole svg element with old data
                                 d3.select(element[0]).select('svg').remove();
@@ -168,10 +181,8 @@
                             element.find('.caption').remove();
                             element.empty();
                             scope.chart = null;
-                        },
-
-                        // Get full directive scope
-                        getScope: function(){ return scope; }
+                            $(window).off('resize', onWindowResize);
+                        }
                     };
 
                     // Configure the chart model with the passed options
@@ -311,28 +322,23 @@
                         return dst;
                     }
 
-                    /* Event Handling */
-                    // Watching on options changing
-                    scope.$watch('options', function(newOptions){
+                    // Watching on options, data, config changing
+                    scope.$watch('options', function(options){
                         if (!scope._config.disabled && scope._config.autorefresh) scope.api.refresh();
                     }, true);
-
-                    // Watching on data changing
-                    scope.$watch('data', function(newData, oldData){
-                        if (newData !== oldData){
-                            if (!scope._config.disabled && scope._config.autorefresh) {
-                                scope._config.refreshDataOnly ? scope.chart.update() : scope.api.refresh(); // if wanted to refresh data only, use chart.update method, otherwise use full refresh.
-                            }
+                    scope.$watch('data', function(data){
+                        if (!scope._config.disabled && scope._config.autorefresh) {
+                            scope._config.refreshDataOnly ? scope.chart.update() : scope.api.refresh(); // if wanted to refresh data only, use chart.update method, otherwise use full refresh.
                         }
                     }, true);
-
-                    // Watching on config changing
-                    scope.$watch('config', function(newConfig, oldConfig){
-                        if (newConfig !== oldConfig){
-                            scope._config = angular.extend(defaultConfig, newConfig);
-                            scope.api.refresh();
-                        }
+                    scope.$watch('config', function(config){
+                        scope._config = angular.extend(defaultConfig, config);
+                        scope.api.refresh();
                     }, true);
+
+                    scope.$on('$destroy', function(){
+                        $(window).off('resize', onWindowResize);
+                    });
 
                     //subscribe on global events
                     angular.forEach(scope.events, function(eventHandler, event){
