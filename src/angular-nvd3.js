@@ -32,7 +32,7 @@
                         // Update chart with new options
                         updateWithOptions: function(options){
 
-                            if (!d3.select(element[0]).select('svg')[0] || !d3.select(element[0]).select('svg')[0][0])
+                            if (!d3.select(element[0]).select('svg')[0] || !d3.select(element[0]).select('svg')[0][0] || (scope.data && scope.data.length === 0))
                             {
                                 // Clearing
                                 scope.api.clearElement();

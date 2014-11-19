@@ -1,5 +1,5 @@
 /**************************************************************************
-* AngularJS-nvD3, v0.1.0; MIT License; 10/29/2014 16:28
+* AngularJS-nvD3, v0.1.0; MIT License; 11/19/2014 19:30
 * http://krispo.github.io/angular-nvd3
 **************************************************************************/
 
@@ -36,7 +36,7 @@
                         // Update chart with new options
                         updateWithOptions: function(options){
 
-                            if (!d3.select(element[0]).select('svg')[0] || !d3.select(element[0]).select('svg')[0][0])
+                            if (!d3.select(element[0]).select('svg')[0] || !d3.select(element[0]).select('svg')[0][0] || (scope.data && scope.data.length === 0))
                             {
                                 // Clearing
                                 scope.api.clearElement();
